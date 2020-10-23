@@ -3,7 +3,6 @@ import os
 import shutil
 import time
 from pathlib import Path
-import tensorflow as tf
 
 import cv2
 import torch
@@ -15,11 +14,8 @@ from utils.datasets import LoadStreams, LoadImages
 from utils.general import (
     check_img_size, non_max_suppression, apply_classifier, scale_coords,
     xyxy2xywh, plot_one_box, strip_optimizer, set_logging)
-from deep_sort import preprocessing
-from deep_sort import nn_matching
 from deep_sort.detection import Detection
 from deep_sort.tracker import Tracker
-from tools import generate_detections as gdet
 from utils.torch_utils import select_device, load_classifier, time_synchronized
 
 
@@ -55,10 +51,7 @@ def detect(save_img=False):
     nms_max_overlap = 1.0
 
     # initialize deep sort
-    model_filename = 'model_data/mars-small128.pb'
-    encoder = gdet.create_box_encoder(model_filename, batch_size=1)
-    metric = nn_matching.NearestNeighborDistanceMetric("cosine", max_cosine_distance, nn_budget)
-    tracker = Tracker(metric)
+    tracker = Tracker()
 
     #physical_devices = tf.config.experimental.list_physical_devices('GPU')
     #if len(physical_devices) > 0:
@@ -126,9 +119,8 @@ def detect(save_img=False):
                 if track:
                     for *xyxy, conf, cls in reversed(det):
                         xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
-                        feature = encoder(im0, xywh)
                         name = names[int(cls)]
-                        detections.append(Detection(xywh, conf, name, feature))
+                        detections.append(Detection(xywh, conf, name))
                     # Call the tracker
                     tracker.predict()
                     tracker.update(detections)
