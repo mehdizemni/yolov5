@@ -118,9 +118,16 @@ def detect(save_img=False):
                 detections=[]
                 if track:
                     for *xyxy, conf, cls in reversed(det):
-                        xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
+                        xyxy2 = [i.tolist() for i in xyxy]
+                        #print(xyxy2)
+                        tlwh=[0,0,0,0]
+                        tlwh[0] = xyxy2[0]
+                        tlwh[1] = xyxy2[1]
+                        tlwh[2] = xyxy2[2] - xyxy2[0]  # width
+                        tlwh[3] = xyxy2[3] - xyxy2[1]  # height
+                        #print(tlwh)
                         name = names[int(cls)]
-                        detections.append(Detection(xywh, conf, name))
+                        detections.append(Detection(tlwh, conf, name))
                     # Call the tracker
                     tracker.predict()
                     tracker.update(detections)
@@ -131,6 +138,9 @@ def detect(save_img=False):
                         class_name = track.get_class()
                         index_class = names.index(class_name)
                         color = colors[index_class]
+                        #print('bbox', bbox)
+                        #print('index class', index_class)
+                        #print(class_name + "-" + str(track.track_id))
                         plot_one_box(bbox, im0, label=class_name + "-" + str(track.track_id), color=color, line_thickness=3)
 
                 else:
@@ -141,6 +151,7 @@ def detect(save_img=False):
                                 f.write(('%g ' * 5 + '\n') % (cls, *xywh))  # label format
 
                         if save_img or view_img:  # Add bbox to image
+                            print(xyxy)
                             label = '%s %.2f' % (names[int(cls)], conf)
                             plot_one_box(xyxy, im0, label=label, color=colors[int(cls)], line_thickness=3)
 
