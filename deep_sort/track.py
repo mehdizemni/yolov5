@@ -63,17 +63,17 @@ class Track:
 
     """
 
-    def __init__(self, mean, covariance, track_id, n_init, max_age, confidence,
+    def __init__(self, mean, covariance, n_init, max_age, confidence,
                  class_name=None):
         self.mean = mean
         self.covariance = covariance
-        self.track_id = track_id
+        #self.track_id = track_id
         self.hits = 1
         self.age = 1
         self.time_since_update = 0
         self.confidence = confidence
         self.state = TrackState.Tentative
-
+        self.track_id = 'new'
         self._n_init = n_init
         self._max_age = max_age
         self.class_name = class_name
@@ -124,7 +124,7 @@ class Track:
         self.age += 1
         self.time_since_update += 1
 
-    def update(self, kf, detection):
+    def update(self, kf, detection, next_id):
         """Perform Kalman filter measurement update step and update the feature
         cache.
 
@@ -143,6 +143,7 @@ class Track:
         self.time_since_update = 0
         if self.state == TrackState.Tentative and self.hits >= self._n_init:
             self.state = TrackState.Confirmed
+            self.track_id = next_id
 
     def mark_missed(self):
         """Mark this track as missed (no association at the current time step).

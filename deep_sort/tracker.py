@@ -37,7 +37,7 @@ class Tracker:
 
     """
 
-    def __init__(self, max_iou_distance=0.7, max_age=30, n_init=3, memory = 5):
+    def __init__(self, max_iou_distance=0.85, max_age=100, n_init=3):
         self.max_iou_distance = max_iou_distance
         self.max_age = max_age
         self.n_init = n_init
@@ -45,7 +45,6 @@ class Tracker:
         self.kf = kalman_filter.KalmanFilter()
         self.tracks = []
         self._next_id = 1
-        self.memory = memory
 
     def predict(self):
         """Propagate track state distributions one time step forward.
@@ -71,7 +70,8 @@ class Tracker:
         # Update track set.
         for track_idx, detection_idx in matches:
             self.tracks[track_idx].update(
-                self.kf, detections[detection_idx])
+                self.kf, detections[detection_idx], self._next_id)
+            self._next_id += 1
         for track_idx in unmatched_tracks:
             self.tracks[track_idx].mark_missed()
         for detection_idx in unmatched_detections:
@@ -96,5 +96,5 @@ class Tracker:
         class_name = detection.get_class()
         confidence = detection.confidence
         self.tracks.append(Track(
-            mean, covariance, self._next_id, self.n_init, self.max_age, confidence, class_name))
-        self._next_id += 1
+            mean, covariance, self.n_init, self.max_age, confidence, class_name))
+        #self._next_id += 1
