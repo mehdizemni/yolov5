@@ -144,6 +144,8 @@ class Track:
         if self.state == TrackState.Tentative and self.hits >= self._n_init:
             self.state = TrackState.Confirmed
             self.track_id = next_id
+            next_id += 1
+        return next_id
 
     def mark_missed(self):
         """Mark this track as missed (no association at the current time step).

@@ -64,14 +64,27 @@ class Tracker:
 
         """
         # Run matching cascade.
+        # 1st matching
         matches, unmatched_tracks, unmatched_detections = \
             self._match(detections)
+        
+        #unmatched tracks mean position correction
+        translation = [0,0]
+        count=0
+        for track_idx, detection_idx in matches:
+            if self.tracks[track_idx].time_since_update == 1:
+                count+=1
+                translation += detections[detection_idx].to_xyah()[:2]-self.tracks[track_idx].mean[:2]
+        if count!=0:
+            translation= translation/count
+            for track_idx in unmatched_tracks:
+                self.tracks[track_idx].mean[:2] +=translation
 
         # Update track set.
         for track_idx, detection_idx in matches:
-            self.tracks[track_idx].update(
+            self._next_id = self.tracks[track_idx].update(
                 self.kf, detections[detection_idx], self._next_id)
-            self._next_id += 1
+
         for track_idx in unmatched_tracks:
             self.tracks[track_idx].mark_missed()
         for detection_idx in unmatched_detections:
