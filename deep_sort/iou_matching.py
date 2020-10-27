@@ -40,7 +40,7 @@ def iou(bbox, candidates):
 
 
 def iou_cost(tracks, detections, track_indices=None,
-             detection_indices=None):
+             detection_indices=None, second_match = False):
     """An intersection over union distance metric.
 
     Parameters
@@ -71,8 +71,9 @@ def iou_cost(tracks, detections, track_indices=None,
 
     cost_matrix = np.zeros((len(track_indices), len(detection_indices)))
     for row, track_idx in enumerate(track_indices):
-
         bbox = tracks[track_idx].to_tlwh()
+        if second_match :
+            bbox = tracks[track_idx].to_tlwh_pos()
         candidates = np.asarray([detections[i].tlwh for i in detection_indices])
         cost_matrix[row, :] = 1. - iou(bbox, candidates)
     return cost_matrix

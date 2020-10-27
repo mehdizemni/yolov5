@@ -67,18 +67,29 @@ class Tracker:
         # 1st matching
         matches, unmatched_tracks, unmatched_detections = \
             self._match(detections)
-        
-        #unmatched tracks mean position correction
-        translation = [0,0]
+
+        #unmatched tracks mean[:2] and pos correction
+        translation, translation_pos = [0,0]
         count=0
         for track_idx, detection_idx in matches:
             if self.tracks[track_idx].time_since_update == 1:
                 count+=1
                 translation += detections[detection_idx].to_xyah()[:2]-self.tracks[track_idx].mean[:2]
+                translation_pos += detections[detection_idx].to_xyah()[:2] -self.tracks[track_idx].pos
         if count!=0:
             translation= translation/count
+            translation_pos = translation_pos/count
             for track_idx in unmatched_tracks:
                 self.tracks[track_idx].mean[:2] +=translation
+                self.tracks[track_idx].pos += translation_pos
+        # 2nd matching using new pos 'corrected'
+        matches2, unmatched_tracks2, unmatched_detections2 = \
+            self._match(detections, track_indices=unmatched_tracks, detection_indices=unmatched_detections, second_match=True)
+        
+        # fusionner les matchs
+        matches = matches + matches2
+        unmatched_tracks = unmatched_tracks2
+        unmatched_detections = unmatched_detections2
 
         # Update track set.
         for track_idx, detection_idx in matches:
@@ -91,7 +102,7 @@ class Tracker:
             self._initiate_track(detections[detection_idx])
         self.tracks = [t for t in self.tracks if not t.is_deleted()]
 
-    def _match(self, detections):
+    def _match(self, detections, track_indices=None, detection_indices=None, second_match=False):
 
         # Associate remaining tracks together with unconfirmed tracks using IOU.
         #iou_track_candidates = [
@@ -100,7 +111,7 @@ class Tracker:
         matches, unmatched_tracks, unmatched_detections = \
             linear_assignment.min_cost_matching(
                 iou_matching.iou_cost, self.max_iou_distance, self.tracks,
-                detections)
+                detections, track_indices, detection_indices, second_match)
 
         return matches, unmatched_tracks, unmatched_detections
 

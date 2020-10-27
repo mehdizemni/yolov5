@@ -66,6 +66,7 @@ class Track:
     def __init__(self, mean, covariance, n_init, max_age, confidence,
                  class_name=None):
         self.mean = mean
+        self.pos = mean[:2]
         self.covariance = covariance
         #self.track_id = track_id
         self.hits = 1
@@ -77,7 +78,21 @@ class Track:
         self._n_init = n_init
         self._max_age = max_age
         self.class_name = class_name
+    def to_tlwh_pos(self):
+        """Get current position in bounding box format `(top left x, top left y,
+        width, height)` using pos attribute instead of pos.
 
+        Returns
+        -------
+        ndarray
+            The bounding box.
+
+        """
+        ret = self.mean[:4].copy()
+        ret[:2] = self.pos
+        ret[2] *= ret[3]
+        ret[:2] -= ret[2:] / 2
+        return ret
     def to_tlwh(self):
         """Get current position in bounding box format `(top left x, top left y,
         width, height)`.
@@ -138,6 +153,7 @@ class Track:
         """
         self.mean, self.covariance = kf.update(
             self.mean, self.covariance, detection.to_xyah())
+        self.pos = detection.to_xyah()[:2]
         self.confidence = detection.confidence
         self.hits += 1
         self.time_since_update = 0

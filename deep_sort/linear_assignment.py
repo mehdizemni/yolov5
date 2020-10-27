@@ -10,7 +10,7 @@ INFTY_COST = 1e+5
 
 def min_cost_matching(
         distance_metric, max_distance, tracks, detections, track_indices=None,
-        detection_indices=None):
+        detection_indices=None, second_match=False):
     """Solve linear assignment problem.
 
     Parameters
@@ -53,7 +53,7 @@ def min_cost_matching(
         return [], track_indices, detection_indices  # Nothing to match.
 
     cost_matrix = distance_metric(
-        tracks, detections, track_indices, detection_indices)
+        tracks, detections, track_indices, detection_indices, second_match)
     cost_matrix[cost_matrix > max_distance] = max_distance + 1e-5
     indices = linear_sum_assignment(cost_matrix)
     indices = np.asarray(indices)
