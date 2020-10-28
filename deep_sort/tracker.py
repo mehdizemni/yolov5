@@ -4,6 +4,7 @@ import numpy as np
 from . import kalman_filter
 from . import linear_assignment
 from . import iou_matching
+from . import r2_matching
 from .track import Track
 
 
@@ -39,6 +40,7 @@ class Tracker:
 
     def __init__(self, max_iou_distance=0.85, max_age=100, n_init=3):
         self.max_iou_distance = max_iou_distance
+        self.max_euclidean_distance = 0
         self.max_age = max_age
         self.n_init = n_init
 
@@ -79,13 +81,25 @@ class Tracker:
         if count!=0:
             translation= translation/count
             translation_pos = translation_pos/count
+            self.max_euclidean_distance = translation_pos[0] ** 2 + translation_pos[1] ** 2
+
             for track_idx in unmatched_tracks:
                 self.tracks[track_idx].mean[:2] +=translation
                 self.tracks[track_idx].pos += translation_pos
         # 2nd matching using new pos 'corrected'
         matches2, unmatched_tracks2, unmatched_detections2 = \
             self._match(detections, track_indices=unmatched_tracks, detection_indices=unmatched_detections, second_match=True)
-        
+
+        # fusionner les matchs
+        matches = matches + matches2
+        unmatched_tracks = unmatched_tracks2
+        unmatched_detections = unmatched_detections2
+
+        #3rd matching
+        matches2, unmatched_tracks2, unmatched_detections2 = \
+            self._match(detections, track_indices=unmatched_tracks, detection_indices=unmatched_detections,
+                        second_match=False, third_match=True)
+
         # fusionner les matchs
         matches = matches + matches2
         unmatched_tracks = unmatched_tracks2
@@ -102,16 +116,21 @@ class Tracker:
             self._initiate_track(detections[detection_idx])
         self.tracks = [t for t in self.tracks if not t.is_deleted()]
 
-    def _match(self, detections, track_indices=None, detection_indices=None, second_match=False):
+    def _match(self, detections, track_indices=None, detection_indices=None, second_match=False, third_match=False):
 
         # Associate remaining tracks together with unconfirmed tracks using IOU.
         #iou_track_candidates = [
         #    i for i, t in enumerate(self.tracks) if t.time_since_update < self.memory]
-
-        matches, unmatched_tracks, unmatched_detections = \
-            linear_assignment.min_cost_matching(
-                iou_matching.iou_cost, self.max_iou_distance, self.tracks,
-                detections, track_indices, detection_indices, second_match)
+        if third_match:
+            matches, unmatched_tracks, unmatched_detections = \
+                linear_assignment.min_cost_matching(
+                    r2_matching.euclidean_cost, self.max_euclidean_distance, self.tracks,
+                    detections, track_indices, detection_indices, second_match)
+        else:
+            matches, unmatched_tracks, unmatched_detections = \
+                linear_assignment.min_cost_matching(
+                    iou_matching.iou_cost, self.max_iou_distance, self.tracks,
+                    detections, track_indices, detection_indices, second_match)
 
         return matches, unmatched_tracks, unmatched_detections
 
